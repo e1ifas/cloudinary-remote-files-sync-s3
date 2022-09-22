@@ -8,6 +8,8 @@ on:
       - reopened
     paths:
       - '**.yaml'
+env:
+  YAMLFMT_VER: 0.5.0
 jobs:
   yamlfmt:
     runs-on: ubuntu-latest
@@ -22,13 +24,18 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
         if: ${{ github.event_name }} = 'pull_request'
-      - name: Install Go
-        uses: actions/setup-go@v3
+      # - name: Install Go
+      #   uses: actions/setup-go@v3
+      # - name: Install yamlfmt
+      #   run: go install github.com/google/yamlfmt/cmd/yamlfmt@latest
+      # - name: Set Go path
+      #   run: |
+      #     export GOPATH=$(go env GOPATH)
+      #     export PATH=${PATH}:$(go env GOPATH)/bin
+      # Dare to install tarball
       - name: Install yamlfmt
-        run: go install github.com/google/yamlfmt/cmd/yamlfmt@latest
-      - name: Set Go path
         run: |
-          export GOPATH=$(go env GOPATH)
-          export PATH=${PATH}:$(go env GOPATH)/bin
+          wget https://github.com/google/yamlfmt/releases/download/v${{ env.YAMLFMT_VER }}/yamlfmt_${{ env.YAMLFMT_VER }}_Linux_x86_64.tar.gz
+          tar xzvf yamlfmt_${{ env.YAMLFMT_VER }}_Linux_x86_64.tar.gz 
       - name: Run yamlfmt
         run: yamlfmt -lint
