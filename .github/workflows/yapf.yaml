@@ -1,8 +1,5 @@
 name: YAPF
 on:
-  push:
-    paths:
-      - '**.py'
   pull_request:
     branches:
       - main

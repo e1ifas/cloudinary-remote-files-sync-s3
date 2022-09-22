@@ -1,9 +1,6 @@
 name: yamlfmt
 on:
-  push:
-    paths:
-      - '**.yaml'
-  pull_request:
+` pull_request:
     branches:
       - main
     types:
@@ -29,10 +26,10 @@ jobs:
         uses: actions/setup-go@v3
       - name: Install yamlfmt
         run: go install github.com/google/yamlfmt/cmd/yamlfmt@latest
-      - name: Set Go path
-        run: |
-          export GOPATH=$HOME/go
-          export GOBIN=$GOPATH/bin
-          export PATH=$PATH:$GOBIN
+      # - name: Set Go path
+      #   run: |
+      #     export GOPATH=$HOME/go
+      #     export GOBIN=$GOPATH/bin
+      #     export PATH=$PATH:$GOBIN
       - name: Run yamlfmt
         run: yamlfmt -lint
