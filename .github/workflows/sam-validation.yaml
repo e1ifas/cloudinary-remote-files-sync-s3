@@ -1,0 +1,34 @@
+name: sam-validation
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+env:
+  AWS_REGION: ap-northeast-1
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout pull request HEAD commit instead of merge commit
+      #  https://github.com/marketplace/actions/checkout#checkout-pull-request-head-commit-instead-of-merge-commit
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+      # https://github.com/aws-actions/configure-aws-credentials
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: $AWS_REGION
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-session-name: GitHubActions # DEFAULT
+      - name: sam validate
+        run: sam validate
+      # Build inside Docker containers
+      - name: sam build
+        run: sam build --use-container
