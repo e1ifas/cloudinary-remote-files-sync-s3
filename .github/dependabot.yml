@@ -25,3 +25,13 @@ updates:
       interval: "weekly"
       time: "00:00"
       timezone: "Asia/Tokyo"
+# - package-ecosystem: "terraform" # See documentation for possible values
+#   directory: "/" # Location of package manifests
+#   commit-message:
+#     prefix: "terraform"
+#     include: "scope" # Include a list of updated dependencies
+#   schedule:
+#     day: "monday"
+#     interval: "weekly"
+#     time: "00:00"
+#     timezone: "Asia/Tokyo"

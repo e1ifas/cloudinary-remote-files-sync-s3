@@ -1,0 +1,53 @@
+name: YAPF
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+    paths:
+      - '**.py'
+jobs:
+  get_python_files_path:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.python_files_path }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        if: ${{ github.event_name }} != 'pull_request'
+      # Checkout pull request HEAD commit instead of merge commit
+      #  https://github.com/marketplace/actions/checkout#checkout-pull-request-head-commit-instead-of-merge-commit
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+        if: ${{ github.event_name }} = 'pull_request'
+      - name: Get Matrix
+        id: matrix
+        run: |
+          PYTHON_FILES_PATH=$(find . -type f -name "*.py" | xargs -I {} echo {} | sort | uniq | sed -e 's/^/"/g' -e 's/$/"/g')
+          echo "::set-output name=python_files_path::$(echo \[${PYTHON_FILES_PATH}\] | sed s/\ /,/g)"
+  yamlfmt:
+    needs: get_python_files_path
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        if: ${{ github.event_name }} != 'pull_request'
+      # Checkout pull request HEAD commit instead of merge commit
+      #  https://github.com/marketplace/actions/checkout#checkout-pull-request-head-commit-instead-of-merge-commit
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+        if: ${{ github.event_name }} = 'pull_request'
+      - name: Setup Python
+        uses: actions/setup-python@v4
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install yapf
+      - name: Run Lint
+        run: yapf --diff ${{ matrix.python_files_path }}
