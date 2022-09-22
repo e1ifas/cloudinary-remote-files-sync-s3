@@ -1,0 +1,38 @@
+name: yamlfmt
+on:
+  push:
+    paths:
+      - '**.yaml'
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+    paths:
+      - '**.yaml'
+jobs:
+  yamlfmt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        if: ${{ github.event_name }} != 'pull_request'
+      # Checkout pull request HEAD commit instead of merge commit
+      #  https://github.com/marketplace/actions/checkout#checkout-pull-request-head-commit-instead-of-merge-commit
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+        if: ${{ github.event_name }} = 'pull_request'
+      - name: Install Go
+        uses: actions/setup-go@v3
+      - name: Install yamlfmt
+        run: go install github.com/google/yamlfmt/cmd/yamlfmt@latest
+      - name: Set Go path
+        run: |
+          export GOPATH=$HOME/go
+          export GOBIN=$GOPATH/bin
+          export PATH=$PATH:$GOBIN
+      - name: Run yamlfmt
+        run: yamlfmt -lint
