@@ -37,5 +37,7 @@ jobs:
         run: |
           wget https://github.com/google/yamlfmt/releases/download/v${{ env.YAMLFMT_VER }}/yamlfmt_${{ env.YAMLFMT_VER }}_Linux_x86_64.tar.gz
           tar xzvf yamlfmt_${{ env.YAMLFMT_VER }}_Linux_x86_64.tar.gz 
+        working-directory: /tmp
       - name: Run yamlfmt
         run: yamlfmt -lint
+        working-directory: /tmp
