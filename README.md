@@ -13,7 +13,8 @@
 
 ## Create CFn stack of Github Oidc IAM Role for GitHub Actions
 
-This role is required to run GitHub Actions `sam-validation.yaml`.
+- This role is required to run GitHub Actions `sam-validation.yaml`.
+- Set value to `OIDCProviderArn` if you already have configured GithubOidc, otherwise CFn tries to create it and fail!
 
 ```bash
 # Just an example. Edit for your own environment.
