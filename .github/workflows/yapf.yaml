@@ -50,4 +50,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install yapf
       - name: Run Lint
-        run: yapf --diff ${{ matrix.python_files_path }}
+        run: |
+          yapf --quiet --style='{based_on_style: facebook, indent_width: 2, CONTINUATION_INDENT_WIDTH: 2}' ${{ matrix.python_files_path }}
