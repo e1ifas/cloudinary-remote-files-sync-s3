@@ -8,3 +8,38 @@
 [![Python](https://img.shields.io/badge/Python-YAPF--Google-red.svg)](https://github.com/google/yapf)
 
 # cloudinary-remote-files-sync-s3
+
+# How to use
+
+## Create CFn stack of Github Oidc IAM Role for GitHub Actions
+
+- This role is required to run GitHub Actions `sam-validation.yaml`.
+- Set value to `OIDCProviderArn` if you already have configured GithubOidc, otherwise CFn tries to create it and fail!
+
+```bash
+# Just an example. Edit for your own environment.
+aws cloudformation create-stack \
+  --stack-name github-oidc-iam-role-cloudinary-remote-files-sync-s3 \
+  --template-body file://path/to/GitHubOIDC.yaml \
+  --parameters ParameterKey=GitHubOrg,ParameterValue=e1ifas ParameterKey=RepositoryName,ParameterValue=cloudinary-remote-files-sync-s3 \
+  --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+```
+
+Then, you can get outputs of by the command below:
+
+```bash
+# Just an example. Edit for your own environment.
+aws cloudformation describe-stacks \
+  --stack-name github-oidc-iam-role-cloudinary-remote-files-sync-s3 \
+  | jq -r '.Stacks[] | .Outputs[]'
+```
+
+## Register parameters to GitHub secrets
+
+You need to register parameters below to GitHub secrets. 
+
+- `AWS_REGION`
+  - Set to your own region.
+- `AWS_ROLE_TO_ASSUME`
+  - Set a value output as `RoleArn` avobe.
+
