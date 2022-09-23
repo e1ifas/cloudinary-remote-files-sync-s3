@@ -28,6 +28,9 @@ Resources:
   Role:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub github-oidc-${GitHubOrg}-${RepositoryName}
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
       AssumeRolePolicyDocument:
         Statement:
           - Effect: Allow
