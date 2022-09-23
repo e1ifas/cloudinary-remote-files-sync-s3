@@ -1,0 +1,343 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  cloudinary-remote-files-sync-s3
+
+  Sample SAM Template for cloudinary-remote-files-sync-s3
+
+# TODO: tag
+Parameters:
+  CloudinaryCloudName:
+    Type: String
+    Default: poc
+    Description: Cloudname of Cloudinary.
+  CloudinaryApiKey:
+    Type: String
+    Description: API Key of Cloudinary.
+    NoEcho: true
+  CloudinaryApiSecret:
+    Type: String
+    Description: API Secret of Cloudinary.
+    NoEcho: true
+  CloudwatchLogRetentionInDays:
+    Type: Number
+    Default: 30
+    Description: Retention In Days of Cloudwatch Log.
+  CreatedBy:
+    Type: String
+    Default: cloudformation
+    Description: Value for CreatedBy tag.
+  Environment:
+    Type: String
+    Default: testing
+    Description: Value for Environment tag.
+  MappingDirOnCloudinary:
+    Type: String
+    Default: s3-content
+    Description: Dirctory mapped on Cloudinary.
+  MappingDirOnS3:
+    Type: String
+    Default: cloudinary-content
+    Description: Dirctory mapped on S3.
+  ObjectDeleteErrorMetricFilterPattern:
+    Type: String
+    Default: "Error: Failed to delete Cloudinary content"
+    Description: Filter Pattern of ObjectDeleteErrorMetricFilter.
+  Service:
+    Type: String
+    Default: poc
+    Description: Value for Service tag.
+  SlackChannelId:
+    Type: String
+    Description: Slack Channel ID.
+    NoEcho: true
+  SlackWorkspaceId:
+    Type: String
+    Description: Slack Workspace ID.
+    NoEcho: true
+Globals:
+  Function:
+    Timeout: 3
+    Tags:
+      Environment: !Ref Environment
+      Service: !Ref Service
+      CreatedBy: !Ref CreatedBy
+    Environment:
+      Variables:
+        SQS_NAME: !GetAtt SqsS3ObjectInfo.QueueName
+        MAPPING_DIR_ON_S3: !Ref MappingDirOnS3
+        MAPPING_DIR_ON_CLOUDINARY: !Ref MappingDirOnCloudinary
+        CLOUDINARY_CLOUDNAME: !Ref CloudinaryCloudName
+        CLOUDINARY_APIKEY: !Ref CloudinaryApiKey
+        CLOUDINARY_APISECRET: !Ref CloudinaryApiSecret
+Resources:
+  ### AWS::SQS::Queue ###
+  SqsS3ObjectInfo:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${AWS::StackName}-S3ObjectInfo
+      SqsManagedSseEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: !Ref Service
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+  ### AWS::S3::Bucket ###
+  S3RemoteFiles:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-remotefiles
+      AccessControl: Private
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: !Ref Service
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+  S3RemoteFilesPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3RemoteFiles
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - s3:GetObject
+            Effect: Allow
+            Resource: !Sub arn:aws:s3:::${S3RemoteFiles}/*
+            Principal:
+              AWS: 232482882421
+  ### AWS::Serverless::Function ###
+  DeleteCloudinaryObjectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: func_delete_cloudinary_object/
+      Description: Delete Cloudinary object when a source object in S3 is deleted.
+      FunctionName: delete_cloudinary_object
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Architectures: ["x86_64"]
+      Policies:
+        - !Ref SqsS3ObjectInfoReceivePolicy
+        - !Ref DeleteCloudinaryObjectFunctionLogGroupWritePolicy
+      Events:
+        SqsQueue:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt SqsS3ObjectInfo.Arn
+  PushToSqsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: func_push_to_sqs/
+      Description: Push info of deleted object from S3 to SQS.
+      FunctionName: push_to_sqs
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Architectures: ["x86_64"]
+      Policies:
+        - !Ref SqsS3ObjectInfoSendPolicy
+        - !Ref PushToSqsFunctionLogGroupWritePolicy
+      Events:
+        S3ObjectDeleted:
+          Type: S3
+          Properties:
+            Bucket: !Ref S3RemoteFiles
+            Events: s3:ObjectRemoved:Delete
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: !Sub ${MappingDirOnS3}/
+  ### AWS::IAM::Policy ###
+  SqsS3ObjectInfoReceivePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: SqsS3ObjectInfoReceive
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+            Resource: !Ref SqsS3ObjectInfo
+  SqsS3ObjectInfoSendPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: SqsS3ObjectInfoSend
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource: !Ref SqsS3ObjectInfo
+  DeleteCloudinaryObjectFunctionLogGroupWritePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: DeleteCloudinaryObjectFunctionLogGroupWrite
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: !GetAtt DeleteCloudinaryObjectFunctionLogGroup.Arn
+  PushToSqsFunctionLogGroupWritePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: PushToSqsFunctionLogGroupWrite
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: !GetAtt PushToSqsFunctionLogGroup.Arn
+  ### AWS::IAM::Role ###
+  ChatbotIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: chatbot
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: chatbot.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CloudWatchReadOnlyAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - autoscaling:Describe*,
+                  - cloudwatch:Describe*,
+                  - cloudwatch:Get*,
+                  - cloudwatch:List*,
+                  - logs:Get*,
+                  - logs:List*,
+                  - logs:StartQuery,
+                  - logs:StopQuery,
+                  - logs:Describe*,
+                  - logs:TestMetricFilter,
+                  - logs:FilterLogEvents,
+                  - sns:Get*,
+                  - sns:List*
+                Resource: ["*"]
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: !Ref Service
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+  ### AWS::SNS::Topic ###
+  SnsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: cloudinary-object-delete-error
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: !Ref Service
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+      TopicName: cloudinary-object-delete-error
+  ### AWS::CloudWatch::Alarm ###
+  CloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SnsTopic
+      OKActions:
+        - !Ref SnsTopic
+      AlarmDescription: Cloudinary object delete error.
+      AlarmName: cloudinary-object-delete-error
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 1
+      MetricName: !Sub ${DeleteCloudinaryObjectFunction}/ObjectDeleteError
+      Namespace: !Sub LogMetrics/${DeleteCloudinaryObjectFunction}
+      Period: 60
+      Statistic: SampleCount
+      Threshold: 1
+      TreatMissingData: notBreaching
+  ### AWS::Logs::LogGroup ###
+  DeleteCloudinaryObjectFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${DeleteCloudinaryObjectFunction}
+      RetentionInDays: !Ref CloudwatchLogRetentionInDays
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: !Ref Service
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+  PushToSqsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${PushToSqsFunction}
+      RetentionInDays: !Ref CloudwatchLogRetentionInDays
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: !Ref Service
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+  ChatbotCloudinaryObjectDeleteErrorLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/chatbot/${CloudwatchAlarm}
+      RetentionInDays: !Ref CloudwatchLogRetentionInDays
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: !Ref Service
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+  ### AWS::Logs::MetricFilter ###
+  ObjectDeleteErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref DeleteCloudinaryObjectFunctionLogGroup
+      FilterPattern: !Ref ObjectDeleteErrorMetricFilterPattern
+      MetricTransformations:
+        - MetricValue: 1
+          MetricName: !Sub ${DeleteCloudinaryObjectFunction}/ObjectDeleteError
+          MetricNamespace: !Sub LogMetrics/${DeleteCloudinaryObjectFunction}
+  ### AWS::Chatbot::SlackChannelConfiguration ###
+  Chatbot:
+    Type: AWS::Chatbot::SlackChannelConfiguration
+    Properties:
+      ConfigurationName: !Ref CloudwatchAlarm
+      IamRoleArn: !GetAtt ChatbotIamRole.Arn
+      LoggingLevel: INFO
+      SlackChannelId: !Ref SlackChannelId
+      SlackWorkspaceId: !Ref SlackWorkspaceId
+      SnsTopicArns:
+        - !GetAtt SnsTopic.TopicArn
