@@ -6,8 +6,6 @@ on:
     types:
       - opened
       - reopened
-env:
-  AWS_REGION: ap-northeast-1
 jobs:
   sam:
     runs-on: ubuntu-latest
@@ -28,7 +26,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-session-name: GitHubActions # DEFAULT
       - name: sam validate
