@@ -22,7 +22,7 @@ aws cloudformation create-stack \
   --stack-name github-oidc-iam-role-cloudinary-remote-files-sync-s3 \
   --template-body file://path/to/GitHubOIDC.yaml \
   --parameters ParameterKey=GitHubOrg,ParameterValue=e1ifas ParameterKey=RepositoryName,ParameterValue=cloudinary-remote-files-sync-s3 \
-  --capabilities CAPABILITY_IAM
+  --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 ```
 
 Then, you can get outputs of by the command below:
