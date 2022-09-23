@@ -5,7 +5,6 @@ Description: >
 
   Sample SAM Template for cloudinary-remote-files-sync-s3
 
-# TODO: tag
 Parameters:
   CloudinaryCloudName:
     Type: String
@@ -25,7 +24,7 @@ Parameters:
     Description: Retention In Days of Cloudwatch Log.
   CreatedBy:
     Type: String
-    Default: cloudformation
+    Default: sam
     Description: Value for CreatedBy tag.
   Environment:
     Type: String
