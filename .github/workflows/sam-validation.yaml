@@ -6,6 +6,8 @@ on:
     types:
       - opened
       - reopened
+    paths:
+      - 'template.yaml'
 permissions:
   id-token: write
   contents: read
