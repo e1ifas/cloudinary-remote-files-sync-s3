@@ -31,18 +31,31 @@ supported_video_formats = [
 ]
 
 
+def get_parameters(record):
+  """
+  Get parameters to be sent to Cloudinary.
+  """
+  filename = record['messageAttributes']['filename']['StringValue']
+  filename_withhout_extension = os.path.splitext(
+    os.path.basename(urlparse(filename).path)
+  )[0]
+  file_extension = record['messageAttributes']['file_extension']['StringValue']
+  # https://cloudinary.com/documentation/upload_images#public_id
+  public_id = os.environ.get(
+    'MAPPING_DIR_ON_CLOUDINARY'
+  ) + "/" + filename_withhout_extension
+
+  return filename, filename_withhout_extension, file_extension, public_id
+
+
 def lambda_handler(event, context):
   """
   Delete object from Cloudinary.
   """
-
   for record in event['Records']:
-    filename = record['messageAttributes']['filename']['stringValue']
-    filename_withhout_extension = os.path.splitext(
-      os.path.basename(urlparse(filename).path)
-    )[0]
-    file_extension = record['messageAttributes']['file_extension']['stringValue'
-                                                                  ]
+    filename, filename_withhout_extension, file_extension, public_id = get_parameters(
+      record
+    )
 
     # image, raw, video or auto. Defaults: image
     _resource_type = ""
@@ -56,11 +69,6 @@ def lambda_handler(event, context):
         "Error: Failed to delete Cloudinary content. File extension ({file_extension}) is not supported."
         .format(file_extension=file_extension)
       )
-
-    # https://cloudinary.com/documentation/upload_images#public_id
-    public_id = os.environ.get(
-      'MAPPING_DIR_ON_CLOUDINARY'
-    ) + "/" + filename_withhout_extension
 
     print("Processing {public_id}.".format(public_id=public_id))
 
