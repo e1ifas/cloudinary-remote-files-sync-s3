@@ -3,6 +3,7 @@
 [![yamlfmt](https://github.com/e1ifas/cloudinary-remote-files-sync-s3/actions/workflows/yamlfmt.yaml/badge.svg)](https://github.com/e1ifas/cloudinary-remote-files-sync-s3/actions/workflows/yamlfmt.yaml)
 [![YAPF](https://github.com/e1ifas/cloudinary-remote-files-sync-s3/actions/workflows/yapf.yaml/badge.svg)](https://github.com/e1ifas/cloudinary-remote-files-sync-s3/actions/workflows/yapf.yaml)
 [![pytest](https://github.com/e1ifas/cloudinary-remote-files-sync-s3/actions/workflows/pytest.yaml/badge.svg)](https://github.com/e1ifas/cloudinary-remote-files-sync-s3/actions/workflows/pytest.yaml)
+[![codeql-analysis](https://github.com/e1ifas/cloudinary-remote-files-sync-s3/actions/workflows/codeql-analysis.yaml/badge.svg)](https://github.com/e1ifas/cloudinary-remote-files-sync-s3/actions/workflows/codeql-analysis.yaml)
 
 **Code Style:**
 [![YAML](https://img.shields.io/badge/YAML-yamlfmt-1f425f.svg)](https://github.com/google/yamlfmt)
