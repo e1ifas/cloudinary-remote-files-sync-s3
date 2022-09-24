@@ -15,6 +15,8 @@ This SAM project is a set of AWS resources to enable it by utilizing [Python SDK
 
 Some related components are included such as AWS Chatbot (to notify application error to Slack) ...etc.
 
+![Architecture](./docs/60NOOLJHSjLTFflQActa4uBeS2zQ1Kud.drawio.png)
+
 # How to use
 
 ## Create CFn stack of Github Oidc IAM Role for GitHub Actions
